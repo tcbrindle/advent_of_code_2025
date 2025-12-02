@@ -1,8 +1,6 @@
 
 module;
 
-#include <flux/macros.hpp>
-
 #include <ankerl/unordered_dense.h>
 
 export module aoc;
@@ -31,7 +29,8 @@ using hash_set = ankerl::unordered_dense::set<K>;
 // So, we're gonna roll our own
 // No, I'm not going to try and do this for floating point...
 export template <std::integral I>
-constexpr auto try_parse = [](flux::sequence auto&& f) -> std::optional<I> {
+constexpr auto try_parse =
+    [](flux::multipass_sequence auto&& f) -> std::optional<I> {
     // constexpr auto is_space = flow::pred::in(' ', '\f', '\n', '\r', '\t',
     // '\v'); constexpr auto is_digit = flow::pred::geq('0') &&
     // flow::pred::leq('9');
@@ -41,7 +40,7 @@ constexpr auto try_parse = [](flux::sequence auto&& f) -> std::optional<I> {
     };
     constexpr auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
 
-    auto f2 = flux::drop_while(FLUX_FWD(f), is_space);
+    auto f2 = flux::ref(f).drop_while(is_space);
 
     I mult = 1;
     std::optional<I> first{};
@@ -75,8 +74,8 @@ constexpr auto try_parse = [](flux::sequence auto&& f) -> std::optional<I> {
 };
 
 export template <std::integral I>
-constexpr auto parse = [](flux::sequence auto&& seq) -> I {
-    return try_parse<I>(FLUX_FWD(seq)).value();
+constexpr auto parse = [](flux::multipass_sequence auto&& seq) -> I {
+    return try_parse<I>(std::forward<decltype(seq)&&>(seq)).value();
 };
 
 export template <typename T>
@@ -111,7 +110,8 @@ constexpr auto timed(F&& f, Args&&... args)
     -> std::pair<std::invoke_result_t<F, Args...>, D>
 {
     timer t;
-    return {std::invoke(FLUX_FWD(f), FLUX_FWD(args)...), t.elapsed<D>()};
+    return {std::invoke(std::forward<F>(f), std::forward<Args>(args)...),
+            t.elapsed<D>()};
 }
 
 export template <typename T>

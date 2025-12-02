@@ -49,3 +49,4 @@ function(ADD_DAY DATE)
 endfunction()
 
 add_day(dec01)
+add_day(dec02)
