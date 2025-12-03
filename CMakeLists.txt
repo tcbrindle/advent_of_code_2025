@@ -50,3 +50,4 @@ endfunction()
 
 add_day(dec01)
 add_day(dec02)
+add_day(dec03)
