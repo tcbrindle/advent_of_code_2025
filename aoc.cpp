@@ -28,63 +28,60 @@ using hash_set = ankerl::unordered_dense::set<K>;
 //  * istreams - urgh
 // So, we're gonna roll our own
 // No, I'm not going to try and do this for floating point...
-export template <std::integral I>
-constexpr auto try_parse =
-    [](flux::multipass_sequence auto&& f) -> std::optional<I> {
-    // constexpr auto is_space = flow::pred::in(' ', '\f', '\n', '\r', '\t',
-    // '\v'); constexpr auto is_digit = flow::pred::geq('0') &&
-    // flow::pred::leq('9');
-    constexpr auto is_space = [](char c) {
-        return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' ||
-               c == '\v';
-    };
-    constexpr auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
+export template <flux::num::integral I>
+constexpr auto try_parse = []<flux::iterable F>
+    requires std::same_as<flux::iterable_value_t<F>, char>
+(F&& f) static -> std::optional<I> {
+    constexpr auto is_space = flux::pred::in(' ', '\f', '\n', '\r', '\t', '\v');
+    constexpr auto is_digit = flux::pred::geq('0') && flux::pred::leq('9');
 
-    auto f2 = flux::ref(f).drop_while(is_space);
+    flux::iteration_context auto ctx = flux::iterate(f);
 
-    I mult = 1;
-    std::optional<I> first{};
+    I multiplier = 1;
+    std::optional<I> value = std::nullopt;
 
-    // Deal with the first character
-    {
-        auto cur = f2.first();
-        if (f2.is_last(cur)) { return std::nullopt; }
-
-        char c = f2[cur];
+    if (auto cur = flux::next_element(ctx)) {
+        char c = *cur;
 
         if (c == '-') {
-            mult = -1;
+            if constexpr (flux::num::signed_integral<I>) {
+                multiplier = -1;
+            } else {
+                return std::nullopt;
+            }
         } else if (c == '+') {
             // pass
         } else if (is_digit(c)) {
-            first = c - '0';
+            value = c - '0';
         } else {
-            return {};
+            return std::nullopt;
         }
+    } else {
+        return std::nullopt;
     }
 
-    // Deal with the rest
-    auto res = std::move(f2).drop(1).take_while(is_digit).fold(
-        [](auto acc, char c) -> std::optional<I> {
-            return 10 * acc.value_or(0) + (c - '0');
-        },
-        std::move(first));
-    if (res) { *res *= mult; }
-    return res;
+    while (auto digit = flux::next_element(ctx)) {
+        char c = *digit;
+        if (!is_digit(c)) { break; }
+        value = 10 * value.value_or(0) + (c - '0');
+    }
+
+    if (value) { *value *= multiplier; }
+    return value;
 };
 
-export template <std::integral I>
-constexpr auto parse = [](flux::multipass_sequence auto&& seq) -> I {
-    return try_parse<I>(std::forward<decltype(seq)&&>(seq)).value();
-};
+static_assert(not try_parse<int>("").has_value());
+static_assert(not try_parse<int>("+").has_value());
+static_assert(try_parse<unsigned short>("8").value() == 8);
+static_assert(try_parse<int>("-1").value() == -1);
 
-export template <typename T>
-constexpr auto vector_from_file = [](char const* path) {
-    std::ifstream file(path);
-    return flux::from_istream<T>(file).template to<std::vector<T>>();
-};
+export template <flux::num::integral I>
+constexpr auto parse = []<flux::iterable F>
+    requires std::same_as<flux::iterable_value_t<F>, char>
+(F&& seq) static -> I { return try_parse<I>(std::forward<F&&>(seq)).value(); };
 
-export constexpr auto string_from_file = [](const char* path) {
+export constexpr auto string_from_file =
+    [](const char* path) static -> std::string {
     std::ifstream file(path);
     return flux::to<std::string>(*file.rdbuf());
 };
