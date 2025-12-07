@@ -5,7 +5,7 @@ set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD
 cmake_minimum_required(VERSION 4.2)
 project(aoc2025 CXX)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_MODULE_STD ON)
 
 include(FetchContent)

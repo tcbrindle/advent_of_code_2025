@@ -22,12 +22,14 @@ auto const parse_input = [](std::string_view input) -> grid2d {
 };
 
 auto const solve = [](grid2d const& grid) -> std::pair<int, u64> {
-    std::flat_map<int, u64> beam_counts, next_beam_counts;
+    std::vector<u64> beam_counts(grid.width), next_beam_counts(grid.width);
     beam_counts[flux::find(grid.data, 'S')] = 1;
     int split_count = 0;
 
     for (int row : flux::iota(1, grid.height)) {
-        for (auto [col, count] : beam_counts) {
+        for (int col : flux::iota(0, grid.width)) {
+            u64 count = beam_counts[col];
+            if (count == 0) { continue; }
             if (grid[col, row] == '^') {
                 next_beam_counts[col - 1] += count;
                 next_beam_counts[col + 1] += count;
@@ -37,10 +39,10 @@ auto const solve = [](grid2d const& grid) -> std::pair<int, u64> {
             }
         }
         std::swap(beam_counts, next_beam_counts);
-        next_beam_counts.clear();
+        flux::fill(next_beam_counts, u64{0});
     }
 
-    return {split_count, flux::sum(beam_counts.values())};
+    return {split_count, flux::sum(beam_counts)};
 };
 
 constexpr auto& test_data = R"(.......S.......
@@ -61,10 +63,7 @@ constexpr auto& test_data = R"(.......S.......
 ...............
 )";
 
-static_assert([] {
-    auto [p1, p2] = solve(parse_input(test_data));
-    return p1 == 21 && p2 == 40;
-}());
+static_assert(solve(parse_input(test_data)) == std::pair{21, 40});
 
 int main(int argc, char** argv)
 {
