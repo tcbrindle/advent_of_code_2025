@@ -35,7 +35,8 @@ constexpr auto try_parse = []<flux::iterable F>
     constexpr auto is_space = flux::pred::in(' ', '\f', '\n', '\r', '\t', '\v');
     constexpr auto is_digit = flux::pred::geq('0') && flux::pred::leq('9');
 
-    flux::iteration_context auto ctx = flux::iterate(f);
+    auto drop_spaces = flux::drop_while(std::ref(f), is_space);
+    flux::iteration_context auto ctx = flux::iterate(drop_spaces);
 
     I multiplier = 1;
     std::optional<I> value = std::nullopt;
