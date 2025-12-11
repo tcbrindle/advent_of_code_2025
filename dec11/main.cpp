@@ -19,52 +19,39 @@ auto const parse_input = [](std::string_view input) -> server_map_t {
         .to<server_map_t>();
 };
 
-static int count_paths_p1(server_map_t const& servers, std::string const& from)
+static i64 count_paths(server_map_t const& servers, std::string const& from,
+                       std::string const& to, cache_t& cache)
 {
-    if (from == "out") {
+    if (from == to) {
         return 1;
-    } else {
-        return flux::ref(servers.at(from))
-            .map([&](std::string const& dest) {
-                return count_paths_p1(servers, dest);
-            })
-            .sum();
-    }
-}
-
-auto const part1 = [](server_map_t const& servers) {
-    return count_paths_p1(servers, "you");
-};
-
-static i64 count_paths_p2(server_map_t const& servers, std::string const& from,
-                          bool has_dac, bool has_fft, cache_t& cache)
-{
-    if (from == "out") {
-        return has_dac && has_fft;
-    } else if (from == "dac") {
-        has_dac = true;
-    } else if (from == "fft") {
-        has_fft = true;
+    } else if (from == "out") {
+        return 0;
     }
 
-    auto const state = std::string(from + char(has_dac) + char(has_fft));
-    if (auto iter = cache.find(state); iter != cache.cend()) {
+    if (auto iter = cache.find(from); iter != cache.cend()) {
         return iter->second;
     }
 
-    i64 res
-        = flux::ref(servers.at(from))
-              .map([&](std::string const& dest) {
-                  return count_paths_p2(servers, dest, has_dac, has_fft, cache);
-              })
-              .sum();
-    cache[state] = res;
+    i64 res = flux::ref(servers.at(from))
+                  .map([&](std::string const& next) {
+                      return count_paths(servers, next, to, cache);
+                  })
+                  .sum();
+    cache[from] = res;
     return res;
 }
 
-auto const part2 = [](server_map_t const& servers) {
+auto const part1 = [](server_map_t const& servers) {
     cache_t cache{};
-    return count_paths_p2(servers, "svr", false, false, cache);
+    return count_paths(servers, "you", "out", cache);
+};
+
+// For both the test data and my input, 'fft' always precedes 'dac'
+auto const part2 = [](server_map_t const& servers) {
+    cache_t cache1{}, cache2{}, cache3{};
+    return count_paths(servers, "svr", "fft", cache1)
+        * count_paths(servers, "fft", "dac", cache2)
+        * count_paths(servers, "dac", "out", cache3);
 };
 
 constexpr auto& test_data1 = R"(aaa: you hhh
