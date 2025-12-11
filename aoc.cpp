@@ -1,8 +1,4 @@
 
-module;
-
-#include <ankerl/unordered_dense.h>
-
 export module aoc;
 
 export import flux;
@@ -161,12 +157,7 @@ struct ankerl::unordered_dense::hash<aoc::vec2_t<T>> {
     [[nodiscard]] auto operator()(aoc::vec2_t<T> const& v) const noexcept
         -> std::uint64_t
     {
-        if constexpr (std::has_unique_object_representations_v<
-                          aoc::vec2_t<T>>) {
-            return detail::wyhash::hash(&v, sizeof(v));
-        } else {
-            return hash<std::pair<T, T>>{}(std::pair<T, T>(v.x, v.y));
-        }
+        return hash<std::pair<T, T>>{}(std::pair<T, T>(v.x, v.y));
     }
 };
 
